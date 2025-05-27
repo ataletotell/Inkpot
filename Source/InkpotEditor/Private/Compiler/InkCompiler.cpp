@@ -6,64 +6,63 @@
 #include "Serialization/JsonSerializer.h"
 #include "Interfaces/IPluginManager.h"
 
-
 namespace InkCompiler
 {
 	FString GetPluginPath()
 	{
-		FString path = FPaths::ProjectPluginsDir() + TEXT( "Inkpot/" );
-		IPluginManager &pluginManager =  IPluginManager::Get();
+		FString path = FPaths::ProjectPluginsDir() + TEXT("Inkpot/");
+		IPluginManager &pluginManager = IPluginManager::Get();
 		TSharedPtr<IPlugin> inkpotPlugin = pluginManager.FindPlugin("Inkpot");
-		if(inkpotPlugin)
+		if (inkpotPlugin)
 			path = inkpotPlugin->GetBaseDir();
-		path = FPaths::ConvertRelativePathToFull( path );
+		path = FPaths::ConvertRelativePathToFull(path);
 		return path;
 	}
 
 	FString GetInkleCatePath()
 	{
-		return GetPluginPath() + TEXT( "/ThirdParty/InkCommandLine/inklecate.exe" );
+		return GetPluginPath() + TEXT("/ThirdParty/InkCommandLine/inklecate.exe");
 	}
 
 	FString GetScratchDirectory()
 	{
-		return GetPluginPath() + TEXT( "/Intermediate/InkCommandLine/" );
+		return FPaths::ProjectSavedDir() + TEXT("Inkpot/");
 	}
 
 	FString GetScratchFileName()
 	{
-		return GetScratchDirectory() + TEXT( "InkFileTemp.ink" );
+		return GetScratchDirectory() + TEXT("InkFileTemp.ink");
 	}
 
-	bool CompileInkFile_Internal(const FString& InkFilePath, FString& OutCompiledJSON, TArray<FString>& Errors, TArray<FString>& Warnings, bool shouldCountVisits, bool bIsCompilationFailExpected )
+	bool CompileInkFile_Internal(const FString &InkFilePath, FString &OutCompiledJSON, TArray<FString> &Errors, TArray<FString> &Warnings, bool shouldCountVisits, bool bIsCompilationFailExpected)
 	{
 		// Check if inklecate exists
 		const FString inkExePath = GetInkleCatePath();
 		if (!FPaths::FileExists(inkExePath))
 		{
-			INKPOT_ERROR("CompileInkFile_Internal - could not locate inklecate.exe." );
+			INKPOT_ERROR("CompileInkFile_Internal - could not locate inklecate.exe.");
 			return false;
 		}
 
 		// resolve file paths
 		FString sourceInkPath = InkFilePath;
-		FPaths::CollapseRelativeDirectories(sourceInkPath );
-		sourceInkPath  = FPaths::ConvertRelativePathToFull( sourceInkPath  );
+		FPaths::CollapseRelativeDirectories(sourceInkPath);
+		sourceInkPath = FPaths::ConvertRelativePathToFull(sourceInkPath);
 
-		FString compiledJsonPath = GetScratchDirectory() + FPaths::GetCleanFilename(sourceInkPath ) + TEXT(".json");
+		FString compiledJsonPath = GetScratchDirectory() + FPaths::GetCleanFilename(sourceInkPath) + TEXT(".json");
 		FPaths::CollapseRelativeDirectories(compiledJsonPath);
 
-		FString args = FString::Printf(TEXT("%s -j -o \"%s\" \"%s\""), shouldCountVisits?TEXT(" -c"):TEXT(" "), *compiledJsonPath, *sourceInkPath );
+		FString args = FString::Printf(TEXT("%s -j -o \"%s\" \"%s\""), shouldCountVisits ? TEXT(" -c") : TEXT(" "), *compiledJsonPath, *sourceInkPath);
 
 		// Execute compile using inklecate and output compiled JSON to Intermediate/InkCommandline.
 		FString stdOut;
 		FString stdErr;
 		int32 returnCode;
-		FString baseDir = FString( FPlatformProcess::BaseDir() );
+		FString baseDir = FString(FPlatformProcess::BaseDir());
 
-		INKPOT_LOG("ExecProcess :\n\tcmd : %s\n\targ : %s\n\tbsd : %s", *inkExePath, *args, *baseDir );
+		INKPOT_LOG("ExecProcess :\n\tcmd : %s\n\targ : %s\n\tbsd : %s", *inkExePath, *args, *baseDir);
 
-		bool bSuccess = FPlatformProcess::ExecProcess(*inkExePath, *args, &returnCode, &stdOut, &stdErr );
+		bool bSuccess = FPlatformProcess::ExecProcess(*inkExePath, *args, &returnCode, &stdOut, &stdErr);
 		if (!bSuccess)
 		{
 			INKPOT_ERROR("CompileInkFile_Internal - %s failed ExecProcess. Error %s: ", *sourceInkPath, *(stdOut + stdErr));
@@ -76,9 +75,9 @@ namespace InkCompiler
 		if (!bCompiled)
 		{
 			// supress warnings for tests that we expect to fail compilation
-			if(!bIsCompilationFailExpected)
+			if (!bIsCompilationFailExpected)
 			{
-				INKPOT_ERROR( "CompileInkFile_Internal - %s failed to compile ink. Error %s: ", *sourceInkPath, *(stdOut + stdErr) );
+				INKPOT_ERROR("CompileInkFile_Internal - %s failed to compile ink. Error %s: ", *sourceInkPath, *(stdOut + stdErr));
 			}
 			return false;
 		}
@@ -93,36 +92,35 @@ namespace InkCompiler
 		return FFileHelper::LoadFileToString(OutCompiledJSON, *compiledJsonPath);
 	}
 
-
 	void FlushScratchDirectory()
 	{
-		IPlatformFile::GetPlatformPhysical().DeleteDirectoryRecursively( *GetScratchDirectory() );
-		IPlatformFile::GetPlatformPhysical().CreateDirectory( *GetScratchDirectory() );
+		IPlatformFile::GetPlatformPhysical().DeleteDirectoryRecursively(*GetScratchDirectory());
+		IPlatformFile::GetPlatformPhysical().CreateDirectory(*GetScratchDirectory());
 	}
 
-	bool CompileInkFile(const FString& InSourceFilePath, FString& OutCompiledJSON, TArray<FString>& Errors, TArray<FString>& Warnings, bool shouldCountVisits, bool bIsCompilationFailExpected )
+	bool CompileInkFile(const FString &InSourceFilePath, FString &OutCompiledJSON, TArray<FString> &Errors, TArray<FString> &Warnings, bool shouldCountVisits, bool bIsCompilationFailExpected)
 	{
 		FlushScratchDirectory();
 		return CompileInkFile_Internal(InSourceFilePath, OutCompiledJSON, Errors, Warnings, shouldCountVisits, bIsCompilationFailExpected);
 	}
 
-	bool CompileInkString(const FString& SourceString, FString& OutCompiledJSON, TArray<FString>& Errors, TArray<FString>& Warnings, bool shouldCountVisits, bool bIsCompilationFailExpected )
+	bool CompileInkString(const FString &SourceString, FString &OutCompiledJSON, TArray<FString> &Errors, TArray<FString> &Warnings, bool shouldCountVisits, bool bIsCompilationFailExpected)
 	{
-		// Save the ink source string to an ink file in the scratch directory for compiling 
+		// Save the ink source string to an ink file in the scratch directory for compiling
 		FlushScratchDirectory();
 		FString tmpFileName = GetScratchFileName();
-		FFileHelper::SaveStringToFile(SourceString, *tmpFileName );
-		return CompileInkFile_Internal(tmpFileName, OutCompiledJSON, Errors, Warnings, shouldCountVisits, bIsCompilationFailExpected );
+		FFileHelper::SaveStringToFile(SourceString, *tmpFileName);
+		return CompileInkFile_Internal(tmpFileName, OutCompiledJSON, Errors, Warnings, shouldCountVisits, bIsCompilationFailExpected);
 	}
 
-	void ParseInklecateOutput(const FString& InklecateOutput, TArray<FString>& Errors, TArray<FString>& Warnings, bool& bCompileSuccess, bool& bExportSuccess)
+	void ParseInklecateOutput(const FString &InklecateOutput, TArray<FString> &Errors, TArray<FString> &Warnings, bool &bCompileSuccess, bool &bExportSuccess)
 	{
 		FString toParse = TEXT("[") + InklecateOutput + TEXT("]");
 		toParse = toParse.Replace(_T("}"), _T("},"));
 
-		TSharedRef< TJsonReader<> > Reader = TJsonReaderFactory<>::Create(toParse);
+		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(toParse);
 
-		TArray< TSharedPtr<FJsonValue> > jsonArray;
+		TArray<TSharedPtr<FJsonValue>> jsonArray;
 		if (FJsonSerializer::Deserialize(Reader, jsonArray))
 		{
 			INKPOT_LOG("CompileInkString - Output: %d", jsonArray.Num());
@@ -130,7 +128,7 @@ namespace InkCompiler
 
 		for (TSharedPtr<FJsonValue> element : jsonArray)
 		{
-			const TSharedPtr<FJsonObject>& elementObject = element->AsObject();
+			const TSharedPtr<FJsonObject> &elementObject = element->AsObject();
 			if (elementObject->HasField(TEXT("compile-success")))
 			{
 				bCompileSuccess = elementObject->GetBoolField(TEXT("compile-success"));

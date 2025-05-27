@@ -5,22 +5,22 @@
 #include "Asset/InkpotStoryAsset.h"
 
 static FDelayedAutoRegisterHelper DelayedAutoRegister(
-EDelayedRegisterRunPhase::EndOfEngineInit, 
-	[]{
-	    if ( UInkpot* inkpot = GEngine->GetEngineSubsystem<UInkpot>() )
-		    inkpot->Register();
-	}
-);
+	EDelayedRegisterRunPhase::EndOfEngineInit,
+	[]
+	{
+		if (UInkpot *inkpot = GEngine->GetEngineSubsystem<UInkpot>())
+			inkpot->Register();
+	});
 
 UInkpot::UInkpot()
-: Super()
+	: Super()
 {
 	Stories = CreateDefaultSubobject<UInkpotStories>(TEXT("InkpotStories"));
 }
 
-void UInkpot::Initialize(FSubsystemCollectionBase &InCollection )
-{ 
-	Super::Initialize( InCollection );
+void UInkpot::Initialize(FSubsystemCollectionBase &InCollection)
+{
+	Super::Initialize(InCollection);
 	Stories->Initialise();
 }
 
@@ -29,25 +29,25 @@ void UInkpot::InitializeStoryFactory()
 	Stories->InitialiseStoryFactory();
 }
 
-UInkpotStory* UInkpot::BeginStory( UInkpotStoryAsset* InStory )
+UInkpotStory *UInkpot::BeginStory(UInkpotStoryAsset *InStory)
 {
-	UInkpotStory* story = Stories->BeginStory( InStory );
-	if(EventOnStoryBegin.IsBound())
-		EventOnStoryBegin.Broadcast( story );
+	UInkpotStory *story = Stories->BeginStory(InStory);
+	if (EventOnStoryBegin.IsBound())
+		EventOnStoryBegin.Broadcast(story);
 	return story;
 }
 
 void UInkpot::EndStory(UInkpotStory *InStory)
 {
-	if(EventOnStoryEnd.IsBound())
-		EventOnStoryEnd.Broadcast( InStory );
-	Stories->EndStory( InStory );
+	if (EventOnStoryEnd.IsBound())
+		EventOnStoryEnd.Broadcast(InStory);
+	Stories->EndStory(InStory);
 }
 
 void UInkpot::Register()
 {
 	BindPostImport();
-	FWorldDelegates::OnStartGameInstance.AddUObject( this, &UInkpot::OnStartGameInstance );
+	FWorldDelegates::OnStartGameInstance.AddUObject(this, &UInkpot::OnStartGameInstance);
 }
 
 void UInkpot::BindPostImport()
@@ -55,16 +55,16 @@ void UInkpot::BindPostImport()
 #if WITH_EDITOR
 	if (IsValid(GEditor))
 	{
-		UImportSubsystem* imports = GEditor->GetEditorSubsystem<UImportSubsystem>();
+		UImportSubsystem *imports = GEditor->GetEditorSubsystem<UImportSubsystem>();
 		if (!imports)
 			return;
 		imports->OnAssetPostImport.AddUObject(this, &UInkpot::OnAssetPostImport);
 	}
-#endif 
+#endif
 }
 
 #if WITH_EDITOR
-void UInkpot::OnAssetPostImport(UFactory* InFactory, UObject* InObject)
+void UInkpot::OnAssetPostImport(UFactory *InFactory, UObject *InObject)
 {
 	if (!GameInstance.IsValid())
 		return;
@@ -73,13 +73,13 @@ void UInkpot::OnAssetPostImport(UFactory* InFactory, UObject* InObject)
 	if (GameInstance->GetWorld()->WorldType != EWorldType::PIE)
 		return;
 
-	if(!FInkpotCVars::bReloadIfAssetChanged)
+	if (!FInkpotCVars::bReloadIfAssetChanged)
 		return;
 	UInkpotStoryAsset *newAsset = Cast<UInkpotStoryAsset>(InObject);
-	if(!newAsset)
+	if (!newAsset)
 		return;
-	UInkpotStory* story = Stories->Reload( newAsset );
-	if(!story)
+	UInkpotStory *story = Stories->Reload(newAsset);
+	if (!story)
 		return;
 
 	if (EventOnStoryBegin.IsBound())
@@ -87,15 +87,15 @@ void UInkpot::OnAssetPostImport(UFactory* InFactory, UObject* InObject)
 	if (FInkpotCVars::bReplayIfReloaded)
 		Stories->Replay(story, false);
 }
-#endif 
+#endif
 
-void UInkpot::OnStartGameInstance( UGameInstance *InInstance )
+void UInkpot::OnStartGameInstance(UGameInstance *InInstance)
 {
 	Stories->Reset();
 	GameInstance = InInstance;
 }
 
-UInkpotStory* UInkpot::GetStory( TSoftObjectPtr<UInkpotStoryAsset> InkpotStoryAssetPath)
+UInkpotStory *UInkpot::GetStory(TSoftObjectPtr<UInkpotStoryAsset> InkpotStoryAssetPath)
 {
 	return Stories->GetStory(InkpotStoryAssetPath);
 }

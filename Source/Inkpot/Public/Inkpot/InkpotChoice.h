@@ -14,18 +14,17 @@ class INKPOT_API UInkpotChoice : public UInkpotLine
 
 public:
 	UInkpotChoice();
-	void Initialise( TSharedPtr<Ink::FChoice>  InInkChoice );
+	void Initialise(TSharedPtr<Ink::FChoice> InInkChoice);
 
-	UFUNCTION(BlueprintPure, Category="Inkpot|Choice")
+	UFUNCTION(BlueprintPure, Category = "Inkpot|Choice")
 	int32 GetIndex() const;
-	bool operator == (int32 Index);
+	bool operator==(int32 Index);
 
-	static const int32 BadChoice {-1};
-
-private:
-	virtual const TArray<FString>& GetTagsInternal() const override;
+	static const int32 BadChoice{-1};
 
 private:
-	TSharedPtr<Ink::FChoice>  InkChoice;
+	virtual const TArray<FString> &GetTagsInternal() const override;
+
+private:
+	TSharedPtr<Ink::FChoice> InkChoice;
 };
-
